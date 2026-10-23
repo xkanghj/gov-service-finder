@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정부 안내서비스 찾기</title>
+<meta name="description" content="시민이 원하는 정부 안내서비스를 서비스명과 안내분야로 빠르게 찾는 페이지">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --ink: #1b1f24;
+    --muted: #5f6873;
+    --line: #e2e6eb;
+    --accent: #0b50d0;
+    --accent-soft: #e8effc;
+    --ok: #0f7a4a;
+    --ok-soft: #e4f4ec;
+    --no: #b3261e;
+    --no-soft: #fbe9e7;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418;
+      --surface: #1a1f25;
+      --ink: #eef1f4;
+      --muted: #9aa4af;
+      --line: #2c333b;
+      --accent: #7aa7ff;
+      --accent-soft: #1d2a42;
+      --ok: #6fd39f;
+      --ok-soft: #173126;
+      --no: #ff8a80;
+      --no-soft: #3a1f1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  header h1 { font-size: 1.75rem; margin: 0 0 6px; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--muted); }
+
+  .controls {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: grid;
+    gap: 14px;
+  }
+  .search { position: relative; }
+  .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search input {
+    width: 100%;
+    font: inherit;
+    font-size: 1rem;
+    padding: 12px 40px 12px 42px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    font-size: 1.2rem; width: 30px; height: 30px; border-radius: 6px; display: none;
+  }
+  .clear.show { display: block; }
+  .clear:hover { background: var(--line); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: inherit; font-size: 0.92rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .chip .n { color: var(--muted); margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip[aria-pressed="true"] .n { color: rgba(255,255,255,.8); }
+  @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { color: #0b1220; } .chip[aria-pressed="true"] .n { color: rgba(11,18,32,.75); } }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .status {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 22px 2px 10px; gap: 12px; flex-wrap: wrap;
+  }
+  .count { font-size: 1rem; }
+  .count strong { color: var(--accent); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .count .total { color: var(--muted); }
+  .reset { font: inherit; font-size: .9rem; border: 0; background: none; color: var(--accent); cursor: pointer; padding: 4px; }
+
+  .table-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+  th { font-size: .82rem; font-weight: 600; color: var(--muted); background: var(--bg); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--accent-soft); }
+  td.name { font-weight: 600; }
+  mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
+  @media (prefers-color-scheme: dark) { mark { background: #6b5a12; } }
+  .tag { display: inline-block; font-size: .82rem; padding: 2px 9px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+  .badge { display: inline-block; font-size: .82rem; font-weight: 600; padding: 2px 9px; border-radius: 6px; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.no { background: var(--no-soft); color: var(--no); }
+  .tel { color: var(--ink); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tel:hover { color: var(--accent); text-decoration: underline; }
+
+  .empty { padding: 48px 16px; text-align: center; color: var(--muted); display: none; }
+  .empty.show { display: block; }
+
+  footer { margin-top: 20px; font-size: .82rem; color: var(--muted); }
+
+  /* 모바일: 표를 카드로 */
+  @media (max-width: 640px) {
+    header h1 { font-size: 1.4rem; }
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tbody tr { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    tbody tr:last-child { border-bottom: 0; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 12px; }
+    td::before { content: attr(data-label); color: var(--muted); font-size: .85rem; }
+    td.name { font-size: 1.05rem; padding-bottom: 8px; }
+    td.name::before { content: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>정부 안내서비스 찾기</h1>
+    <p>서비스명으로 검색하거나 안내분야를 골라 필요한 안내를 빠르게 찾아보세요.</p>
+  </header>
+
+  <section class="controls" aria-label="검색 및 필터">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <label for="q" class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">서비스명 검색</label>
+      <input id="q" type="search" placeholder="서비스명 검색 (예: 연금, 세금, 운전면허)" autocomplete="off">
+      <button class="clear" id="clear" type="button" aria-label="검색어 지우기">×</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="안내분야 필터"></div>
+  </section>
+
+  <div class="status">
+    <div class="count" aria-live="polite">현재 <strong id="shown">24</strong>건 표시 <span class="total">/ 전체 <span id="total">24</span>건</span></div>
+    <button class="reset" id="reset" type="button" hidden>필터 초기화</button>
+  </div>
+
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr><th>서비스명</th><th>안내분야</th><th>소관기관</th><th>온라인안내</th><th>콜센터</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty">조건에 맞는 안내서비스가 없습니다. 검색어나 분야를 바꿔 보세요.</div>
+  </div>
+
+  <footer>데이터: 안내서비스 목록 (24건)</footer>
+</div>
+
+<script>
+const SERVICES = [
+  {"서비스ID":"A001","서비스명":"주민등록 발급 안내","안내분야":"민원","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1374"},
+  {"서비스ID":"A002","서비스명":"전입신고 안내","안내분야":"민원","소관기관":"보건복지부","온라인안내":"가능","콜센터":"1352"},
+  {"서비스ID":"A003","서비스명":"인감증명 안내","안내분야":"민원","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1313"},
+  {"서비스ID":"A004","서비스명":"민원접수 안내","안내분야":"민원","소관기관":"교육부","온라인안내":"가능","콜센터":"1341"},
+  {"서비스ID":"A005","서비스명":"정부24 이용 안내","안내분야":"민원","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1356"},
+  {"서비스ID":"A006","서비스명":"기초연금 안내","안내분야":"복지","소관기관":"행정안전부","온라인안내":"불가","콜센터":"1386"},
+  {"서비스ID":"A007","서비스명":"복지급여 안내","안내분야":"복지","소관기관":"고용노동부","온라인안내":"가능","콜센터":"1319"},
+  {"서비스ID":"A008","서비스명":"장애인지원 안내","안내분야":"복지","소관기관":"보건복지부","온라인안내":"가능","콜센터":"1337"},
+  {"서비스ID":"A009","서비스명":"아동수당 안내","안내분야":"복지","소관기관":"지자체","온라인안내":"가능","콜센터":"1326"},
+  {"서비스ID":"A010","서비스명":"지방세 납부 안내","안내분야":"세금","소관기관":"보건복지부","온라인안내":"가능","콜센터":"1357"},
+  {"서비스ID":"A011","서비스명":"취득세 안내","안내분야":"세금","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1341"},
+  {"서비스ID":"A012","서비스명":"재산세 안내","안내분야":"세금","소관기관":"지자체","온라인안내":"가능","콜센터":"1317"},
+  {"서비스ID":"A013","서비스명":"자동차등록 안내","안내분야":"교통","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1399"},
+  {"서비스ID":"A014","서비스명":"운전면허 안내","안내분야":"교통","소관기관":"보건복지부","온라인안내":"불가","콜센터":"1357"},
+  {"서비스ID":"A015","서비스명":"주정차단속 안내","안내분야":"교통","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1367"},
+  {"서비스ID":"A016","서비스명":"재난지원금 안내","안내분야":"재난","소관기관":"행정안전부","온라인안내":"불가","콜센터":"1356"},
+  {"서비스ID":"A017","서비스명":"대피소 안내","안내분야":"재난","소관기관":"국세청","온라인안내":"가능","콜센터":"1359"},
+  {"서비스ID":"A018","서비스명":"안전신고 안내","안내분야":"재난","소관기관":"국세청","온라인안내":"가능","콜센터":"1357"},
+  {"서비스ID":"A019","서비스명":"국민취업지원 안내","안내분야":"일자리","소관기관":"지자체","온라인안내":"가능","콜센터":"1386"},
+  {"서비스ID":"A020","서비스명":"구직급여 안내","안내분야":"일자리","소관기관":"국토교통부","온라인안내":"불가","콜센터":"1350"},
+  {"서비스ID":"A021","서비스명":"청년일자리 안내","안내분야":"일자리","소관기관":"지자체","온라인안내":"가능","콜센터":"1392"},
+  {"서비스ID":"A022","서비스명":"평생교육 안내","안내분야":"교육","소관기관":"국토교통부","온라인안내":"가능","콜센터":"1379"},
+  {"서비스ID":"A023","서비스명":"학자금 안내","안내분야":"교육","소관기관":"지자체","온라인안내":"가능","콜센터":"1324"},
+  {"서비스ID":"A024","서비스명":"교육비지원 안내","안내분야":"교육","소관기관":"행정안전부","온라인안내":"가능","콜센터":"1368"}
+];
+
+const $ = (id) => document.getElementById(id);
+const state = { q: "", field: "전체" };
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
+
+// 검색어를 공백 무시하고 매칭, 원문에 하이라이트
+function highlight(text, q) {
+  const nq = norm(q);
+  if (!nq) return esc(text);
+  const chars = [...text];
+  const idxMap = [];
+  let compact = "";
+  chars.forEach((c, i) => { if (!/\s/.test(c)) { idxMap.push(i); compact += c.toLowerCase(); } });
+  const pos = compact.indexOf(nq);
+  if (pos < 0) return esc(text);
+  const start = idxMap[pos], end = idxMap[pos + nq.length - 1] + 1;
+  return esc(chars.slice(0, start).join("")) + "<mark>" + esc(chars.slice(start, end).join("")) + "</mark>" + esc(chars.slice(end).join(""));
+}
+
+// 분야 칩 생성 (데이터 순서 유지)
+const fields = ["전체", ...new Set(SERVICES.map((s) => s.안내분야))];
+$("chips").innerHTML = fields.map((f) => {
+  const n = f === "전체" ? SERVICES.length : SERVICES.filter((s) => s.안내분야 === f).length;
+  return `<button type="button" class="chip" data-field="${esc(f)}" aria-pressed="${f === "전체"}">${esc(f)}<span class="n">${n}</span></button>`;
+}).join("");
+
+function render() {
+  const nq = norm(state.q);
+  const list = SERVICES.filter((s) =>
+    (state.field === "전체" || s.안내분야 === state.field) &&
+    (!nq || norm(s.서비스명).includes(nq))
+  );
+
+  $("rows").innerHTML = list.map((s) => `
+    <tr>
+      <td class="name" data-label="서비스명">${highlight(s.서비스명, state.q)}</td>
+      <td data-label="안내분야"><span class="tag">${esc(s.안내분야)}</span></td>
+      <td data-label="소관기관">${esc(s.소관기관)}</td>
+      <td data-label="온라인안내"><span class="badge ${s.온라인안내 === "가능" ? "ok" : "no"}">${esc(s.온라인안내)}</span></td>
+      <td data-label="콜센터"><a class="tel" href="tel:${esc(s.콜센터)}">${esc(s.콜센터)}</a></td>
+    </tr>`).join("");
+
+  $("shown").textContent = list.length;
+  $("empty").classList.toggle("show", list.length === 0);
+  $("clear").classList.toggle("show", state.q.length > 0);
+  $("reset").hidden = !(state.q || state.field !== "전체");
+  document.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", b.dataset.field === state.field));
+}
+
+$("total").textContent = SERVICES.length;
+$("q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+$("clear").addEventListener("click", () => { state.q = ""; $("q").value = ""; $("q").focus(); render(); });
+$("chips").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip");
+  if (!b) return;
+  state.field = b.dataset.field;
+  render();
+});
+$("reset").addEventListener("click", () => { state.q = ""; state.field = "전체"; $("q").value = ""; render(); });
+
+render();
+</script>
+</body>
+</html>
